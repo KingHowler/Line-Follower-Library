@@ -134,4 +134,15 @@ class LineFollower {
     // Straight if no errors found
     forward(255, 255);
   }
+
+  public : void P_LFR(int P) {
+    IR.Update();
+
+    float Error = ( (!IR.LH_V*-2) + (!IR.LM_V*-1) + (!IR.M_V*0) + (!IR.RM_V*1) + (!IR.RH_V*2) )   /   (IR.LH_V + IR.LM_V + IR.M_V + IR.RM_V + IR.RH_V);
+    int speeds = min(abs(P*Error), 255);
+
+    if (Error <  0) left     (speeds, speeds);
+    if (Error == 0) forward  (speeds, speeds);
+    if (Error >  0) right    (speeds, speeds);
+  }
 };
