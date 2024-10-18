@@ -23,11 +23,11 @@ class IR_Array {
   public :  int RM;
   public :  int RH;
 
-  public : int LH_V;
-  public : int LM_V;
-  public : int  M_V;
-  public : int RM_V;
-  public : int RH_V;
+  public : bool LH_V;
+  public : bool LM_V;
+  public : bool M_V;
+  public : bool RM_V;
+  public : bool RH_V;
 
   public : void ReadyIR() {
     pinMode(LH, INPUT);
@@ -37,12 +37,12 @@ class IR_Array {
     pinMode(RH, INPUT);
   }
 
-  public : void Update() {
-    LH_V = digitalRead(LH);
-    LM_V = digitalRead(LM);
-    M_V = digitalRead(M);
-    RM_V = digitalRead(RM);
-    RH_V = digitalRead(RH);
+  public : void Update(int LookFor) {
+    LH_V = (digitalRead(LH) == LookFor);
+    LM_V = (digitalRead(LM) == LookFor);
+    M_V =  (digitalRead(M) == LookFor);
+    RM_V = (digitalRead(RM) == LookFor);
+    RH_V = (digitalRead(RH) == LookFor);
   }
 
   void PrintSensors() {
@@ -116,29 +116,25 @@ class LineFollower {
     Right.turnMotor(1, 0);
   }
 
-  public : void basicLFR() {
-    IR.Update();
-
+  public : void basicLFR(int MaxSpeed, int SmallTurnSpeed) {
     // Small Deviations
-    if (IR.LM_V && !IR.LH_V){ left(150, 180); return; }
-    if (IR.RM_V && !IR.RH_V){ right(150, 180); return; }
-
-    // Offshoots
-    if (IR.LH_V){ left(255, 0); return; }
-    if (IR.RH_V){ right(255, 0); return; }
+    if (IR.LM_V && !IR.LH_V){ left(SmallTurnSpeed, SmallTurnSpeed); Serial.println("Small Left"); return; }
+    if (IR.RM_V && !IR.RH_V){ right(SmallTurnSpeed, SmallTurnSpeed); Serial.println("Small Right"); return; }
 
     // 90 Degrees
-    if (IR.M_V && IR.LM_V &&  IR.LH_V) { left(255, 255); return; }
-    if (IR.M_V && IR.RM_V &&  IR.RH_V) { right(255, 255); return; }
+    if (IR.M_V && IR.LM_V &&  IR.LH_V) { left(MaxSpeed, MaxSpeed); Serial.println("Left 90"); return; }
+    if (IR.M_V && IR.RM_V &&  IR.RH_V) { right(MaxSpeed, MaxSpeed); Serial.println("Right 90"); return; }
+
+    // Offshoots
+    if (IR.LH_V){ left(SmallTurnSpeed, MaxSpeed); Serial.println("Big Left"); return; }
+    if (IR.RH_V){ right(MaxSpeed, SmallTurnSpeed); Serial.println("Big Right"); return; }
 
     // Straight if no errors found
-    forward(255, 255);
+    if (IR.M_V && !IR.LH_V && !IR.RH_V && ! IR.LM_V && !IR.RM_V) { forward(MaxSpeed, MaxSpeed); Serial.println("Forward"); }
   }
 
   public : void P_LFR(int P) {
-    IR.Update();
-
-    float Error = ( (!IR.LH_V*-2) + (!IR.LM_V*-1) + (!IR.M_V*0) + (!IR.RM_V*1) + (!IR.RH_V*2) )   /   (IR.LH_V + IR.LM_V + IR.M_V + IR.RM_V + IR.RH_V);
+    float Error = ( (IR.LH_V*-2) + (IR.LM_V*-1) + (IR.M_V*0) + (IR.RM_V*1) + (IR.RH_V*2) )   /   (!IR.LH_V + !IR.LM_V + !IR.M_V + !IR.RM_V + !IR.RH_V);
     int speeds = min(abs(P*Error), 255);
 
     if (Error <  0) left     (speeds, speeds);
